@@ -1,57 +1,68 @@
 #!/bin/bash
 total_cores=$1
+
 if [[ -z "$1" || ! "$1" =~ ^[0-9]+$ ]]; then
     echo "Usage: $0 [cpu-count] [-h | --help] [-p|--performance min_freq max_freq] [-b|--powersave min_freq max_freq] [--restore-governor]"
     exit 1
 fi
+
 cpu_vendor=$(grep -m1 "vendor_id" /proc/cpuinfo | awk '{print $3}')
-scaling_driver=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver)
+scaling_driver=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_driver 2>/dev/null)
+
 shift
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -p|--performance)
-            if [[ -z "$2" || -z "$3" ]]; then
-                echo "Error: Missing min_freq and max_freq for performance mode."
+            if [[ -z "$2" || -z "$3" || ! "$2" =~ ^[0-9]+$ || ! "$3" =~ ^[0-9]+$ ]]; then
+                echo "Error: Missing or invalid min_freq and max_freq for performance mode."
                 exit 1
             fi
+            min_freq_khz=$(( $2 * 1000 ))
+            max_freq_khz=$(( $3 * 1000 ))
             for i in $(seq 0 $((total_cores - 1))); do
                 echo "Setting CPU: $i to performance mode ($2 MHz - $3 MHz)"
-                if [[ "$cpu_vendor" == "AuthenticAMD" ]]; then
-                    sudo sh -c "echo 'performance' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor"
+                sudo sh -c "echo 'performance' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor"
+                [[ -f "/sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference" ]] && \
                     sudo sh -c "echo 'performance' > /sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference"
-                elif [[ "$cpu_vendor" == "GenuineIntel" ]]; then
-                    sudo sh -c "echo 'performance' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor"
-                    sudo sh -c "echo 'performance' > /sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference"
-                fi                           
-                sudo cpupower -c $i frequency-set -d "$2" -u "$3" -g performance
+                sudo cpupower -c $i frequency-set -d "$min_freq_khz" -u "$max_freq_khz" -g performance
             done
             shift 3
             exit 0
             ;;
         -b|--powersave)
-            min_freq=${2:-"400"}
-            max_freq=${3:-"1800"}
+            min_freq=${2:-400}
+            max_freq=${3:-1800}
+
+            if ! [[ "$min_freq" =~ ^[0-9]+$ && "$max_freq" =~ ^[0-9]+$ ]]; then
+                echo "Error: Invalid frequency values."
+                exit 1
+            fi
+
+            min_freq_khz=$(( min_freq * 1000 ))
+            max_freq_khz=$(( max_freq * 1000 ))
+
             for i in $(seq 0 $((total_cores - 1))); do
                 echo "Setting CPU: $i to powersave mode ($min_freq MHz - $max_freq MHz)"
-                if [[ "$cpu_vendor" == "AuthenticAMD" ]]; then
-                    sudo sh -c "echo 'powersave' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor"
-                    sudo sh -c "echo 'powersave' > /sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference"
-                elif [[ "$cpu_vendor" == "GenuineIntel" ]]; then
-                    sudo sh -c "echo 'power' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor"
+                sudo sh -c "echo 'powersave' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_governor"
+                [[ -f "/sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference" ]] && \
                     sudo sh -c "echo 'power' > /sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference"
-                fi
-                sudo cpupower -c $i frequency-set -d "${min_freq}000" -u "${max_freq}000" -g powersave
+                sudo cpupower -c $i frequency-set -d "$min_freq_khz" -u "$max_freq_khz" -g powersave
             done
             shift 3
             exit 0
             ;;
-        --restore-settings|-rs)
-            echo "Restoring default settings..."
+            --restore-governor|-rg)
+            echo "Restoring default governor..."
             for i in $(seq 0 $((total_cores - 1))); do
                 if [[ "$cpu_vendor" == "AuthenticAMD" ]]; then
-                    sudo sh -c "echo 'amd-pstate-epp' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_driver"
+                    if [[ "$scaling_driver" == "amd-pstate-epp" ]]; then
+                        sudo sh -c "echo 'balance_performance' > /sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference"
+                    fi
                 elif [[ "$cpu_vendor" == "GenuineIntel" ]]; then
-                    sudo sh -c "echo 'intel_pstate' > /sys/devices/system/cpu/cpu$i/cpufreq/scaling_driver"
+                    if [[ "$scaling_driver" == "intel_pstate" ]]; then
+                        sudo sh -c "echo 'balance_performance' > /sys/devices/system/cpu/cpu$i/cpufreq/energy_performance_preference"
+                    fi
                 fi
             done
             exit 0
@@ -69,3 +80,4 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
