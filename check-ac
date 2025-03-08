@@ -1,0 +1,20 @@
+#!/bin/bash
+AC_DIR=$(ls /sys/class/power_supply/ | grep -E "^AC|^AC0|^ACAD" | head -n 1)
+
+if [ -n "$AC_DIR" ]; then
+    AC_STATUS_FILE="/sys/class/power_supply/$AC_DIR/online"
+
+    if [ -f "$AC_STATUS_FILE" ]; then
+        AC_STATUS=$(cat "$AC_STATUS_FILE")
+
+        if [ "$AC_STATUS" -eq 1 ]; then
+            echo "1 : Plugged into AC power"
+        else
+            echo "0 : Running on battery"
+        fi
+    else
+        echo "AC status file not found! Check your power supply path."
+    fi
+else
+    echo "No AC power supply directory found!"
+fi

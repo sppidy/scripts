@@ -1,0 +1,36 @@
+#!/bin/bash
+
+if [[ -z "$1" || ! "$1" =~ ^[01]$ ]]; then
+    echo "Usage: $0 [1|0] [-h | --help] [--override-bat|-o]"
+    exit 1
+fi
+
+ac_status=$(check-ac | grep -E "0 :|1 :" | awk '{print $1}')
+
+if [ "$1" -eq 1 ]; then
+    if [ "$ac_status" -eq 1 ]; then
+        sudo sh -c "echo '1' > /sys/devices/system/cpu/cpufreq/boost"
+    else
+        echo "Not Recommended on Battery"
+    fi
+elif [ "$1" -eq 0 ]; then
+    sudo sh -c "echo '0' > /sys/devices/system/cpu/cpufreq/boost"
+fi
+
+while [[ $# -gt 1 ]]; do
+    case "$2" in
+        -o|--override-bat)
+            sudo sh -c "echo '1' > /sys/devices/system/cpu/cpufreq/boost"
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: $0 [1|0] [-h | --help] [--override|-o]"
+            exit 0
+            ;;
+        *)
+            echo "Invalid option: $2"
+            exit 1
+            ;;
+    esac
+done
+
