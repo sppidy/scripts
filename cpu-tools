@@ -1,4 +1,11 @@
+# Copyright (C) 2025 sppidy
+#
+# This file is a part of <https://github.com/sppidy/scripts>
+# Please read the GNU General Public License in
+# <https://www.github.com/sppidy/scripts/blob/main/LICENSE/>.
+
 #!/bin/bash
+
 total_cores=$1
 
 if [[ -z "$1" || ! "$1" =~ ^[0-9]+$ ]]; then
@@ -80,4 +87,3 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
