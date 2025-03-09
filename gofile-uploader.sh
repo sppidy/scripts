@@ -1,3 +1,9 @@
+# Copyright (C) 2025 sppidy
+#
+# This file is a part of <https://github.com/sppidy/scripts>
+# Please read the GNU General Public License in
+# <https://www.github.com/sppidy/scripts/blob/main/LICENSE/>.
+
 #!/bin/bash
 
 # Check if curl, jq, and ping are installed

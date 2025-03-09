@@ -1,3 +1,9 @@
+# Copyright (C) 2025 sppidy
+#
+# This file is a part of <https://github.com/sppidy/scripts>
+# Please read the GNU General Public License in
+# <https://www.github.com/sppidy/scripts/blob/main/LICENSE/>.
+
 #!/bin/bash
 AC_DIR=$(ls /sys/class/power_supply/ | grep -E "^AC|^AC0|^ACAD" | head -n 1)
 
